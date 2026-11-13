@@ -1,18 +1,24 @@
+from typing import Annotated
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 from support.agents import answer, delegate
 from support.store import Store
 
 
+Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+Email = Annotated[str, StringConstraints(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+
+
 class FollowUp(BaseModel):
-    message: str
+    message: Text
 
 
 class SupportRequest(BaseModel):
-    name: str
-    email: str
-    message: str
+    name: Text
+    email: Email
+    message: Text
 
 
 DEFAULT_FALLBACK_NUMBER = "+1-800-555-0100"

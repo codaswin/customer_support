@@ -106,3 +106,27 @@ def test_follow_up_on_no_fit_thread_gets_the_fallback_number_again(tmp_path):
 def test_follow_up_on_unknown_thread_is_not_found(tmp_path):
     r = client(tmp_path / "s.db").post("/threads/nope/messages", json={"message": "Hi"})
     assert r.status_code == 404
+
+
+def test_invalid_submissions_are_rejected_with_a_clear_error(tmp_path):
+    c = client(tmp_path / "s.db")
+    for bad in [
+        {**FORM, "message": "   "},
+        {**FORM, "name": ""},
+        {**FORM, "email": "not-an-email"},
+    ]:
+        r = c.post("/requests", json=bad)
+        assert r.status_code == 422
+        assert r.json()["detail"]
+
+
+def test_empty_follow_up_is_rejected(tmp_path):
+    c = client(tmp_path / "s.db", "HR", "First answer.")
+    thread_id = c.post("/requests", json=FORM).json()["thread_id"]
+    assert c.post(f"/threads/{thread_id}/messages", json={"message": " "}).status_code == 422
+
+
+def test_unknown_thread_id_is_not_found(tmp_path):
+    r = client(tmp_path / "s.db").get("/threads/nope")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Support Thread not found"
