@@ -1,0 +1,6 @@
+autogen-agentchat
+autogen-ext
+fastapi
+httpx
+pytest
+uvicorn
