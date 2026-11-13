@@ -1,3 +1,5 @@
+"""HTTP interface: the web form, Support Requests, follow-ups and Support Threads."""
+
 from pathlib import Path
 from typing import Annotated
 
@@ -7,7 +9,6 @@ from pydantic import BaseModel, StringConstraints
 
 from support.agents import answer, delegate
 from support.store import Store
-
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
 Email = Annotated[str, StringConstraints(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
@@ -31,7 +32,7 @@ MAX_HISTORY_TURNS = 20
 
 
 def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
-    app = FastAPI()
+    app = FastAPI(title="Customer Support")
     store = Store(db_path)
     no_fit_reply = f"Sorry, we can't help with that here. Please call {fallback_number}."
     unknown_reply = f"I don't know the answer to that. Please call {fallback_number}."
@@ -66,11 +67,12 @@ def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
         return {"specialist": specialist, "answer": reply}
 
     @app.get("/", include_in_schema=False)
-    def web_form():
+    async def web_form():
         return FileResponse(INDEX_HTML)
 
+    # Endpoints are all async so the single shared SQLite connection stays on one thread.
     @app.get("/threads/{thread_id}")
-    def read_thread(thread_id: str):
+    async def read_thread(thread_id: str):
         thread = store.get_thread(thread_id)
         if thread is None:
             raise HTTPException(404, "Support Thread not found")

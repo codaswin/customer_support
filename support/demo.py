@@ -1,7 +1,10 @@
 """Keyword-based stand-in for the language model, so the app runs without an API key."""
+
 import re
 
 from autogen_ext.models.replay import ReplayChatCompletionClient
+
+from support.agents import NO_FIT, UNKNOWN
 
 ROUTES = {
     "Billing": ("invoice", "refund", "bill", "charge", "plan", "price", "payment"),
@@ -20,14 +23,14 @@ def _route(message):
     for name, keys in ROUTES.items():
         if any(w.startswith(k) for w in words for k in keys):
             return name
-    return "NONE"
+    return NO_FIT
 
 
 def _from_knowledge_base(system, message):
     kb = system.split("Knowledge Base:\n", 1)[1].split("\nIf it does not", 1)[0]
     asked = _words(message) - _words("the a to i how do my is can and of what which")
     best = max(kb.splitlines(), key=lambda line: len(asked & _words(line)), default="")
-    return best.lstrip("- ") if asked & _words(best) else "UNKNOWN"
+    return best.lstrip("- ") if asked & _words(best) else UNKNOWN
 
 
 class DemoModelClient(ReplayChatCompletionClient):
@@ -40,7 +43,9 @@ class DemoModelClient(ReplayChatCompletionClient):
         system, user = messages[0].content, messages[-1].content
         message = user.rsplit("Customer: ", 1)[-1]
         self.chat_completions = [
-            _from_knowledge_base(system, message) if "Knowledge Base:" in system else _route(message)
+            _from_knowledge_base(system, message)
+            if "Knowledge Base:" in system
+            else _route(message)
         ]
         self._current_index = 0
         return await super().create(messages, **kwargs)

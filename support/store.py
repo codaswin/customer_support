@@ -6,6 +6,8 @@ class Store:
     """Durable Support Threads in SQLite."""
 
     def __init__(self, path):
+        # shortcut: one shared connection, safe because every endpoint runs on the event loop
+        # thread; move to a connection per request if endpoints ever become sync.
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.executescript(
             """

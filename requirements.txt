@@ -1,6 +1,0 @@
-autogen-agentchat
-autogen-ext[openai]
-fastapi
-httpx
-pytest
-uvicorn
