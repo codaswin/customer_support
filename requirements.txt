@@ -1,5 +1,5 @@
 autogen-agentchat
-autogen-ext
+autogen-ext[openai]
 fastapi
 httpx
 pytest

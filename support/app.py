@@ -19,9 +19,9 @@ def create_app(model_client, db_path):
     async def submit(req: SupportRequest):
         specialist = await delegate(model_client, req.message)
         reply = await answer(model_client, specialist, req.message)
-        thread_id = store.create_thread(req.name, req.email, specialist)
-        store.add_message(thread_id, "customer", req.message)
-        store.add_message(thread_id, specialist, reply)
+        thread_id = store.create_thread(
+            req.name, req.email, specialist, [("customer", req.message), (specialist, reply)]
+        )
         return {"thread_id": thread_id, "specialist": specialist, "answer": reply}
 
     @app.get("/threads/{thread_id}")

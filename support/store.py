@@ -17,20 +17,19 @@ class Store:
             """
         )
 
-    def create_thread(self, name, email, specialist):
+    def create_thread(self, name, email, specialist, messages):
+        """Create a thread and its first (sender, text) messages in one transaction."""
         thread_id = uuid.uuid4().hex
         with self.db:
             self.db.execute(
-                "INSERT INTO threads VALUES (?, ?, ?, ?)", (thread_id, name, email, specialist)
+                "INSERT INTO threads (id, name, email, specialist) VALUES (?, ?, ?, ?)",
+                (thread_id, name, email, specialist),
+            )
+            self.db.executemany(
+                "INSERT INTO messages (thread_id, sender, text) VALUES (?, ?, ?)",
+                [(thread_id, sender, text) for sender, text in messages],
             )
         return thread_id
-
-    def add_message(self, thread_id, sender, text):
-        with self.db:
-            self.db.execute(
-                "INSERT INTO messages (thread_id, sender, text) VALUES (?, ?, ?)",
-                (thread_id, sender, text),
-            )
 
     def get_thread(self, thread_id):
         row = self.db.execute(
