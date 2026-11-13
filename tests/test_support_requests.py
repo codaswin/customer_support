@@ -157,3 +157,23 @@ def test_web_form_is_served_at_the_root(tmp_path):
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/html")
     assert '<form id="request-form"' in r.text
+
+
+def demo(tmp_path, message):
+    from support.demo import DemoModelClient
+
+    form = {**FORM, "message": message}
+    return TestClient(create_app(DemoModelClient(), tmp_path / "d.db")).post("/requests", json=form).json()
+
+
+def test_demo_mode_routes_and_answers_from_the_knowledge_base(tmp_path):
+    body = demo(tmp_path, "How do I get a refund?")
+    assert body["specialist"] == "Billing"
+    assert "within 30 days" in body["answer"]
+    assert demo(tmp_path, "How do I add seats?")["specialist"] == "HR"
+    assert demo(tmp_path, "The app crashes on start")["specialist"] == "IT"
+
+
+def test_demo_mode_handles_no_fit_and_unknown(tmp_path):
+    assert demo(tmp_path, "What is the weather today?")["specialist"] is None
+    assert "don't know" in demo(tmp_path, "Which error colour theme exists?")["answer"]
