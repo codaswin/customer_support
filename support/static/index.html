@@ -79,6 +79,8 @@
 <script>
 const $ = (id) => document.getElementById(id);
 let threadId = null;
+const THREAD_ID = /^[0-9a-f]{32}$/; // matches the server-generated id format
+const threadPath = (id) => `/threads/${encodeURIComponent(id)}`;
 
 function errorText(body, status) {
   const d = body && body.detail;
@@ -126,7 +128,7 @@ function show(id) {
 
 async function load(id) {
   try {
-    const t = await api(`/threads/${id}`);
+    const t = await api(threadPath(id));
     show(id);
     render(t.messages);
   } catch (e) {
@@ -159,9 +161,9 @@ $("follow-form").addEventListener("submit", async (ev) => {
   const text = $("follow").value;
   btn.disabled = true;
   try {
-    const current = (await api(`/threads/${threadId}`)).messages;
+    const current = (await api(threadPath(threadId))).messages;
     render([...current, { sender: "customer", text }], true);
-    await api(`/threads/${threadId}/messages`, {
+    await api(`${threadPath(threadId)}/messages`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }),
     });
     $("follow").value = "";
@@ -169,12 +171,12 @@ $("follow-form").addEventListener("submit", async (ev) => {
     $("follow-error").textContent = e.message;
   } finally {
     btn.disabled = false;
-    render((await api(`/threads/${threadId}`)).messages);
+    render((await api(threadPath(threadId))).messages);
   }
 });
 
 const existing = new URLSearchParams(location.search).get("thread");
-if (existing) load(existing);
+if (existing && THREAD_ID.test(existing)) load(existing);
 </script>
 </body>
 </html>
