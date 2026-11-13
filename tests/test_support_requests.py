@@ -28,3 +28,19 @@ def test_support_thread_survives_restart(tmp_path):
     r = second.get(f"/threads/{thread_id}")
     assert r.status_code == 200
     assert r.json()["messages"][-1]["text"] == "Try reinstalling the app."
+
+
+def test_each_specialist_is_chosen_for_its_domain(tmp_path):
+    for label, text in [("HR", "Add two seats."), ("Billing", "Refund issued.")]:
+        c = client(tmp_path / f"{label}.db", label, text)
+        body = c.post("/requests", json=FORM).json()
+        assert body["specialist"] == label
+        assert body["answer"] == text
+
+
+def test_request_fitting_two_domains_goes_to_exactly_one_specialist(tmp_path):
+    c = client(tmp_path / "s.db", "Billing", "Your invoice is corrected.")
+    body = c.post("/requests", json=FORM).json()
+    thread = c.get(f"/threads/{body['thread_id']}").json()
+    assert body["specialist"] == "Billing"
+    assert [m["sender"] for m in thread["messages"]] == ["customer", "Billing"]
