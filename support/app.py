@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, StringConstraints
 
 from support.agents import answer, delegate
@@ -21,6 +23,7 @@ class SupportRequest(BaseModel):
     message: Text
 
 
+INDEX_HTML = Path(__file__).parent / "static" / "index.html"
 DEFAULT_FALLBACK_NUMBER = "+1-800-555-0100"
 # Bound model cost per thread: messages stored, and turns sent to the model per follow-up.
 MAX_THREAD_MESSAGES = 50
@@ -61,6 +64,10 @@ def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
         sender, reply = await respond(specialist, req.message, history)
         store.add_messages(thread_id, [("customer", req.message), (sender, reply)])
         return {"specialist": specialist, "answer": reply}
+
+    @app.get("/", include_in_schema=False)
+    def web_form():
+        return FileResponse(INDEX_HTML)
 
     @app.get("/threads/{thread_id}")
     def read_thread(thread_id: str):

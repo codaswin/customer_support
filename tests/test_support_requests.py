@@ -150,3 +150,10 @@ def test_thread_stops_accepting_follow_ups_at_the_cap(tmp_path, monkeypatch):
     thread_id = c.post("/requests", json=FORM).json()["thread_id"]
     assert c.post(f"/threads/{thread_id}/messages", json={"message": "one"}).status_code == 200
     assert c.post(f"/threads/{thread_id}/messages", json={"message": "two"}).status_code == 429
+
+
+def test_web_form_is_served_at_the_root(tmp_path):
+    r = client(tmp_path / "s.db").get("/")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/html")
+    assert '<form id="request-form"' in r.text
