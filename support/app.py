@@ -7,7 +7,7 @@ from support.agents import answer, delegate
 from support.store import Store
 
 
-Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
 Email = Annotated[str, StringConstraints(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
 
 
@@ -22,6 +22,9 @@ class SupportRequest(BaseModel):
 
 
 DEFAULT_FALLBACK_NUMBER = "+1-800-555-0100"
+# Bound model cost per thread: messages stored, and turns sent to the model per follow-up.
+MAX_THREAD_MESSAGES = 50
+MAX_HISTORY_TURNS = 20
 
 
 def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
@@ -52,7 +55,9 @@ def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
         if thread is None:
             raise HTTPException(404, "Support Thread not found")
         specialist = thread["specialist"]
-        history = [(m["sender"], m["text"]) for m in thread["messages"]]
+        if len(thread["messages"]) >= MAX_THREAD_MESSAGES:
+            raise HTTPException(429, "This Support Thread is full")
+        history = [(m["sender"], m["text"]) for m in thread["messages"]][-MAX_HISTORY_TURNS:]
         sender, reply = await respond(specialist, req.message, history)
         store.add_messages(thread_id, [("customer", req.message), (sender, reply)])
         return {"specialist": specialist, "answer": reply}

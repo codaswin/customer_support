@@ -137,3 +137,16 @@ def test_model_replies_are_matched_tolerantly(tmp_path):
     assert c.post("/requests", json=FORM).json()["specialist"] == "HR"
     d = client(tmp_path / "b.db", "IT", "unknown.")
     assert "don't know" in d.post("/requests", json=FORM).json()["answer"]
+
+
+def test_oversized_messages_are_rejected(tmp_path):
+    c = client(tmp_path / "s.db")
+    assert c.post("/requests", json={**FORM, "message": "x" * 5000}).status_code == 422
+
+
+def test_thread_stops_accepting_follow_ups_at_the_cap(tmp_path, monkeypatch):
+    monkeypatch.setattr("support.app.MAX_THREAD_MESSAGES", 4)
+    c = client(tmp_path / "s.db", "HR", "a1", "a2", "a3")
+    thread_id = c.post("/requests", json=FORM).json()["thread_id"]
+    assert c.post(f"/threads/{thread_id}/messages", json={"message": "one"}).status_code == 200
+    assert c.post(f"/threads/{thread_id}/messages", json={"message": "two"}).status_code == 429
