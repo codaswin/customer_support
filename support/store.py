@@ -25,11 +25,18 @@ class Store:
                 "INSERT INTO threads (id, name, email, specialist) VALUES (?, ?, ?, ?)",
                 (thread_id, name, email, specialist),
             )
-            self.db.executemany(
-                "INSERT INTO messages (thread_id, sender, text) VALUES (?, ?, ?)",
-                [(thread_id, sender, text) for sender, text in messages],
-            )
+            self._insert_messages(thread_id, messages)
         return thread_id
+
+    def add_messages(self, thread_id, messages):
+        with self.db:
+            self._insert_messages(thread_id, messages)
+
+    def _insert_messages(self, thread_id, messages):
+        self.db.executemany(
+            "INSERT INTO messages (thread_id, sender, text) VALUES (?, ?, ?)",
+            [(thread_id, sender, text) for sender, text in messages],
+        )
 
     def get_thread(self, thread_id):
         row = self.db.execute(

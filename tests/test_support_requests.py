@@ -74,3 +74,35 @@ def test_each_specialist_is_given_only_its_own_knowledge_base(tmp_path):
     specialist_prompt = model.create_calls[1]["messages"][0].content
     assert "Refunds are available within 30 days" in specialist_prompt
     assert "reinstall it" not in specialist_prompt
+
+
+def test_follow_up_is_answered_by_the_same_specialist_without_redelegation(tmp_path):
+    c = client(tmp_path / "s.db", "HR", "First answer.", "Second answer.")
+    thread_id = c.post("/requests", json=FORM).json()["thread_id"]
+    r = c.post(f"/threads/{thread_id}/messages", json={"message": "And how many seats?"})
+    assert r.status_code == 200
+    assert r.json() == {"specialist": "HR", "answer": "Second answer."}
+    thread = c.get(f"/threads/{thread_id}").json()
+    assert [m["sender"] for m in thread["messages"]] == ["customer", "HR", "customer", "HR"]
+
+
+def test_follow_up_survives_restart(tmp_path):
+    db = tmp_path / "s.db"
+    first = client(db, "HR", "First answer.", "Second answer.")
+    thread_id = first.post("/requests", json=FORM).json()["thread_id"]
+    first.post(f"/threads/{thread_id}/messages", json={"message": "More?"})
+    thread = client(db).get(f"/threads/{thread_id}").json()
+    assert len(thread["messages"]) == 4
+
+
+def test_follow_up_on_no_fit_thread_gets_the_fallback_number_again(tmp_path):
+    app = create_app(ReplayChatCompletionClient(["NONE"]), tmp_path / "s.db", "+1-555-0199")
+    c = TestClient(app)
+    thread_id = c.post("/requests", json=FORM).json()["thread_id"]
+    r = c.post(f"/threads/{thread_id}/messages", json={"message": "Please?"})
+    assert "+1-555-0199" in r.json()["answer"]
+
+
+def test_follow_up_on_unknown_thread_is_not_found(tmp_path):
+    r = client(tmp_path / "s.db").post("/threads/nope/messages", json={"message": "Hi"})
+    assert r.status_code == 404

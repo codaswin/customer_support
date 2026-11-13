@@ -37,8 +37,12 @@ def _system_message(specialist):
     )
 
 
-async def answer(model_client, specialist, message):
-    """Return the Specialist's reply, or None when its Knowledge Base has no answer."""
+async def answer(model_client, specialist, message, history=()):
+    """Return the Specialist's reply, or None when its Knowledge Base has no answer.
+
+    history is the thread so far as (sender, text) pairs, for follow-ups.
+    """
     agent = AssistantAgent(specialist.lower(), model_client, system_message=_system_message(specialist))
-    reply = await _reply(agent, message)
+    transcript = "".join(f"{sender}: {text}\n" for sender, text in history)
+    reply = await _reply(agent, f"{transcript}Customer: {message}" if transcript else message)
     return None if reply == UNKNOWN else reply
