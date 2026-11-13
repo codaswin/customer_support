@@ -17,6 +17,10 @@ SPECIALIST_PROMPTS = {
 }
 
 
+def _normalise(text):
+    return text.strip().strip(".!\"' ").upper()
+
+
 async def _reply(agent, text):
     result = await agent.run(task=text)
     return result.messages[-1].content.strip()
@@ -26,7 +30,8 @@ async def delegate(model_client, message):
     """Return the chosen Specialist's name, or None when no Specialist fits."""
     manager = AssistantAgent("manager", model_client, system_message=MANAGER_PROMPT)
     label = await _reply(manager, message)
-    return label if label in SPECIALIST_PROMPTS else None
+    wanted = _normalise(label)
+    return next((name for name in SPECIALIST_PROMPTS if name.upper() == wanted), None)
 
 
 def _system_message(specialist):
@@ -45,4 +50,4 @@ async def answer(model_client, specialist, message, history=()):
     agent = AssistantAgent(specialist.lower(), model_client, system_message=_system_message(specialist))
     transcript = "".join(f"{sender}: {text}\n" for sender, text in history)
     reply = await _reply(agent, f"{transcript}Customer: {message}" if transcript else message)
-    return None if reply == UNKNOWN else reply
+    return None if _normalise(reply) == UNKNOWN else reply

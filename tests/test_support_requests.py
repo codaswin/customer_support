@@ -130,3 +130,10 @@ def test_unknown_thread_id_is_not_found(tmp_path):
     r = client(tmp_path / "s.db").get("/threads/nope")
     assert r.status_code == 404
     assert r.json()["detail"] == "Support Thread not found"
+
+
+def test_model_replies_are_matched_tolerantly(tmp_path):
+    c = client(tmp_path / "a.db", " hr. ", "Seats added.")
+    assert c.post("/requests", json=FORM).json()["specialist"] == "HR"
+    d = client(tmp_path / "b.db", "IT", "unknown.")
+    assert "don't know" in d.post("/requests", json=FORM).json()["answer"]

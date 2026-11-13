@@ -30,16 +30,17 @@ def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
     no_fit_reply = f"Sorry, we can't help with that here. Please call {fallback_number}."
     unknown_reply = f"I don't know the answer to that. Please call {fallback_number}."
 
+    async def respond(specialist, message, history=()):
+        """Return (sender, reply): the Manager's Fallback Number reply, or the Specialist's."""
+        if specialist is None:
+            return "Manager", no_fit_reply
+        reply = await answer(model_client, specialist, message, history)
+        return specialist, reply or unknown_reply
+
     @app.post("/requests")
     async def submit(req: SupportRequest):
         specialist = await delegate(model_client, req.message)
-        if specialist is None:
-            sender = "Manager"
-            reply = no_fit_reply
-        else:
-            sender = specialist
-            reply = await answer(model_client, specialist, req.message)
-            reply = reply or unknown_reply
+        sender, reply = await respond(specialist, req.message)
         thread_id = store.create_thread(
             req.name, req.email, specialist, [("customer", req.message), (sender, reply)]
         )
@@ -51,12 +52,8 @@ def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
         if thread is None:
             raise HTTPException(404, "Support Thread not found")
         specialist = thread["specialist"]
-        if specialist is None:
-            sender, reply = "Manager", no_fit_reply
-        else:
-            sender = specialist
-            history = [(m["sender"], m["text"]) for m in thread["messages"]]
-            reply = await answer(model_client, specialist, req.message, history) or unknown_reply
+        history = [(m["sender"], m["text"]) for m in thread["messages"]]
+        sender, reply = await respond(specialist, req.message, history)
         store.add_messages(thread_id, [("customer", req.message), (sender, reply)])
         return {"specialist": specialist, "answer": reply}
 
