@@ -1,0 +1,3 @@
+- Seats can be added by an account owner from Settings > Team, up to the plan limit.
+- Account ownership can be transferred by the current owner from Settings > Account.
+- Contracts renew annually; cancellation needs 30 days' notice before the renewal date.

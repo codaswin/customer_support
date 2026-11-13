@@ -1,0 +1,3 @@
+- If the app crashes on start, reinstall it and clear its cache folder.
+- Supported browsers are the latest two versions of Chrome, Firefox and Safari.
+- To reset a forgotten password, use "Forgot password" on the sign-in page.

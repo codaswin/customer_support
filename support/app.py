@@ -27,6 +27,8 @@ def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
         else:
             sender = specialist
             reply = await answer(model_client, specialist, req.message)
+            if reply is None:
+                reply = f"I don't know the answer to that. Please call {fallback_number}."
         thread_id = store.create_thread(
             req.name, req.email, specialist, [("customer", req.message), (sender, reply)]
         )

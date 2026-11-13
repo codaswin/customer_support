@@ -58,3 +58,19 @@ def test_request_fitting_no_specialist_gets_the_fallback_number(tmp_path):
 def test_unrecognised_manager_label_is_treated_as_no_fit(tmp_path):
     c = client(tmp_path / "s.db", "Marketing")
     assert c.post("/requests", json=FORM).json()["specialist"] is None
+
+
+def test_specialist_without_an_answer_says_so_and_gives_the_fallback_number(tmp_path):
+    app = create_app(ReplayChatCompletionClient(["IT", "UNKNOWN"]), tmp_path / "s.db", "+1-555-0199")
+    body = TestClient(app).post("/requests", json=FORM).json()
+    assert body["specialist"] == "IT"
+    assert "don't know" in body["answer"]
+    assert "+1-555-0199" in body["answer"]
+
+
+def test_each_specialist_is_given_only_its_own_knowledge_base(tmp_path):
+    model = ReplayChatCompletionClient(["Billing", "Refund issued."])
+    TestClient(create_app(model, tmp_path / "s.db")).post("/requests", json=FORM)
+    specialist_prompt = model.create_calls[1]["messages"][0].content
+    assert "Refunds are available within 30 days" in specialist_prompt
+    assert "reinstall it" not in specialist_prompt

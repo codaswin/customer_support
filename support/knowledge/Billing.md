@@ -1,0 +1,3 @@
+- Invoices are issued on the first day of each billing period and are payable within 14 days.
+- Refunds are available within 30 days of payment and are returned to the original payment method.
+- Plan changes take effect immediately and are prorated on the next invoice.
