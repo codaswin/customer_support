@@ -44,3 +44,17 @@ def test_request_fitting_two_domains_goes_to_exactly_one_specialist(tmp_path):
     thread = c.get(f"/threads/{body['thread_id']}").json()
     assert body["specialist"] == "Billing"
     assert [m["sender"] for m in thread["messages"]] == ["customer", "Billing"]
+
+
+def test_request_fitting_no_specialist_gets_the_fallback_number(tmp_path):
+    app = create_app(ReplayChatCompletionClient(["NONE"]), tmp_path / "s.db", "+1-555-0199")
+    body = TestClient(app).post("/requests", json=FORM).json()
+    assert body["specialist"] is None
+    assert "+1-555-0199" in body["answer"]
+    thread = TestClient(app).get(f"/threads/{body['thread_id']}").json()
+    assert [m["sender"] for m in thread["messages"]] == ["customer", "Manager"]
+
+
+def test_unrecognised_manager_label_is_treated_as_no_fit(tmp_path):
+    c = client(tmp_path / "s.db", "Marketing")
+    assert c.post("/requests", json=FORM).json()["specialist"] is None

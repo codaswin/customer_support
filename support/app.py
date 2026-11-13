@@ -11,16 +11,24 @@ class SupportRequest(BaseModel):
     message: str
 
 
-def create_app(model_client, db_path):
+DEFAULT_FALLBACK_NUMBER = "+1-800-555-0100"
+
+
+def create_app(model_client, db_path, fallback_number=DEFAULT_FALLBACK_NUMBER):
     app = FastAPI()
     store = Store(db_path)
 
     @app.post("/requests")
     async def submit(req: SupportRequest):
         specialist = await delegate(model_client, req.message)
-        reply = await answer(model_client, specialist, req.message)
+        if specialist is None:
+            sender = "Manager"
+            reply = f"Sorry, we can't help with that here. Please call {fallback_number}."
+        else:
+            sender = specialist
+            reply = await answer(model_client, specialist, req.message)
         thread_id = store.create_thread(
-            req.name, req.email, specialist, [("customer", req.message), (specialist, reply)]
+            req.name, req.email, specialist, [("customer", req.message), (sender, reply)]
         )
         return {"thread_id": thread_id, "specialist": specialist, "answer": reply}
 

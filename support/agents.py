@@ -4,7 +4,7 @@ MANAGER_PROMPT = (
     "You are the Manager of a customer support team. Read the Support Request and "
     "reply with ONLY the name of the best-matching Specialist: IT (product and technical "
     "issues), HR (accounts and contracts: seats, ownership, terms) or Billing (money only: "
-    "invoices, refunds, plan changes). If a request spans two, pick the single best match."
+    "invoices, refunds, plan changes). If a request spans two, pick the single best match. If none fits, reply NONE."
 )
 SPECIALIST_PROMPTS = {
     "IT": "You are the IT Specialist. Answer product and technical questions concisely.",
@@ -19,10 +19,10 @@ async def _reply(agent, text):
 
 
 async def delegate(model_client, message):
+    """Return the chosen Specialist's name, or None when no Specialist fits."""
     manager = AssistantAgent("manager", model_client, system_message=MANAGER_PROMPT)
     label = await _reply(manager, message)
-    # shortcut: unknown labels fall back to IT; the No-fit ticket replaces this
-    return label if label in SPECIALIST_PROMPTS else "IT"
+    return label if label in SPECIALIST_PROMPTS else None
 
 
 async def answer(model_client, specialist, message):
